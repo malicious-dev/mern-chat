@@ -6,9 +6,11 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs')
 const User = require('./models/user');
 
 const app = express();
+const bcryptSalt = bcrypt.genSaltSync(10);
 
 //enable cors
 app.use(cors(
@@ -34,11 +36,15 @@ app.get('/me', async (req, res, next) => {
 // app.use('/api', require('./routes/api'));
 app.post('/register', async (req, res, next) => {
   const { username, password } = req.body;
+  if (username === '' || password === '') {
+    return res.status(422).send({ error: 'You must provide username and password' });
+  }
   const checkUsername = await User.findOne({ username: username });
   if (checkUsername) {
     return res.status(422).send({ error: 'Username already exists' });
   }
-  const createUser = await User.create({ username, password });
+  const hashPassword = await bcrypt.hash(password, bcryptSalt);
+  const createUser = await User.create({ username, password: hashPassword });
   jwt.sign({ userId: createUser._id, username }, process.env.SECRET_KEY, function (err, token) {
     if (err) {
       return res.status(422).send({ error: err.message });
@@ -49,7 +55,29 @@ app.post('/register', async (req, res, next) => {
   });
 });
 
+//login 
+app.post('/login', async (req, res, next) => {
+  const { username, password } = req.body;
+  const user = await User.findOne({ username: username });
+  if (!user) {
+    return res.status(422).send({ error: 'Invalid username or password' });
+  }
+  const checkPassword = await bcrypt.compare(password, user.password);
+  if (!checkPassword) {
+    return res.status(422).send({ error: 'Invalid username or password' });
+  }
+  jwt.sign({ userId: user._id, username }, process.env.SECRET_KEY, function (err, token) {
+    if (err) {
+      return res.status(422).send({ error: err.message });
+    }
+    res.cookie('token', token).status(200).json({
+      id: user._id,
+    });
+  }
+  );
+})
 
+//profile
 app.get('/profile', async (req, res, next) => {
   const token = req.cookies?.token;
   if (!token) {
