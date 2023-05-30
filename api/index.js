@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const User = require('./models/user');
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(cors(
     credentials: true
   }
 ));
+app.use(cookieParser());
 
 //connect to mongodb
 mongoose.connect(process.env.DATABASE);
@@ -37,7 +39,7 @@ app.post('/register', async (req, res, next) => {
     return res.status(422).send({ error: 'Username already exists' });
   }
   const createUser = await User.create({ username, password });
-  jwt.sign({ userId: createUser._id }, process.env.SECRET_KEY, function (err, token) {
+  jwt.sign({ userId: createUser._id, username }, process.env.SECRET_KEY, function (err, token) {
     if (err) {
       return res.status(422).send({ error: err.message });
     }
@@ -49,16 +51,18 @@ app.post('/register', async (req, res, next) => {
 
 
 app.get('/profile', async (req, res, next) => {
-  const { token } = req.cookies;
+  const token = req.cookies?.token;
   if (!token) {
     return res.status(401).send({ error: 'You must be logged in' });
+  } else {
+    jwt.verify(token, process.env.SECRET_KEY, async (err, payload) => {
+      if (err) {
+        return res.status(401).send({ error: 'You must be logged in' });
+      }
+      res.json(payload)
+    })
   }
-  jwt.verify(token, process.env.SECRET_KEY, async (err, payload) => {
-    if (err) {
-      return res.status(401).send({ error: 'You must be logged in' });
-    }
-    res.json(payload)
-  })
+
 });
 
 
