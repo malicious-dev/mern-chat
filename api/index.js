@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs')
+const ws = require('ws');
 const User = require('./models/user');
 
 const app = express();
@@ -102,7 +103,12 @@ app.use(function (err, req, res, next) {
 );
 
 //listen for requests
-app.listen(process.env.PORT, function () {
-  console.log('now listening for requests ' + process.env.PORT);
+const server = app.listen(5000);
+
+const wss = new ws.WebSocketServer({ server });
+
+wss.on('connection', (connection) => {
+  console.log('connected')
+  connection.send('hello')
 }
 );
