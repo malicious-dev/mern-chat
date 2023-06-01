@@ -13,10 +13,39 @@ export default function Chat() {
   const { username, id } = useContext(UserContext);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:5000');
-    setWs(ws);
-    ws.addEventListener('message', handleMessage);
-  }, []);
+    function handleMessage(event) {
+      const messageData = JSON.parse(event.data);
+      if (messageData.online) {
+        showOnlinePeople(messageData?.online);
+      } else if ('text' in messageData) {
+        console.log(messageData.text);
+        setNewMessageText('');
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: messageData.text,
+            isOur: false,
+            recipient: selectUserId,
+            id: Date.now(),
+          },
+        ]);
+      }
+    }
+
+    function connectToWs() {
+      const ws = new WebSocket('ws://localhost:5000');
+      setWs(ws);
+      ws.addEventListener('message', handleMessage);
+      ws.addEventListener('close', () => {
+        setTimeout(() => {
+          console.log('Disconnected, reconnecting...');
+          connectToWs();
+        }, 5000);
+      });
+    }
+    connectToWs();
+  }, [selectUserId]);
 
   function showOnlinePeople(peopleArray) {
     const people = {};
@@ -24,26 +53,6 @@ export default function Chat() {
       people[userId] = username;
     });
     setOnlinePeople(people);
-  }
-
-  function handleMessage(event) {
-    const messageData = JSON.parse(event.data);
-    if (messageData.online) {
-      showOnlinePeople(messageData?.online);
-    } else if ('text' in messageData) {
-      console.log(messageData.text);
-      setNewMessageText('');
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          text: messageData.text,
-          isOur: false,
-          recipient: selectUserId,
-          id: Date.now(),
-        },
-      ]);
-    }
   }
 
   function sendMessage(e) {

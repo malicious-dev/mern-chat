@@ -75,8 +75,7 @@ app.post('/login', async (req, res, next) => {
     res.cookie('token', token).status(200).json({
       id: user._id,
     });
-  }
-  );
+  });
 })
 
 //profile
