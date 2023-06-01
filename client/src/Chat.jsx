@@ -29,20 +29,20 @@ export default function Chat() {
   function handleMessage(event) {
     const messageData = JSON.parse(event.data);
     if (messageData.online) {
-      showOnlinePeople(messageData.online);
+      showOnlinePeople(messageData?.online);
     } else if ('text' in messageData) {
+      console.log(messageData.text);
       setNewMessageText('');
-      if (newMessageText !== '') {
-        setMessages((prev) => [
-          ...prev,
-          {
-            text: messageData.text,
-            isOur: false,
-            recipient: selectUserId,
-            id: Date.now(),
-          },
-        ]);
-      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: messageData.text,
+          isOur: false,
+          recipient: selectUserId,
+          id: Date.now(),
+        },
+      ]);
     }
   }
 
@@ -55,17 +55,15 @@ export default function Chat() {
       })
     );
     setNewMessageText('');
-    if (newMessageText !== '') {
-      setMessages((prev) => [
-        ...prev,
-        {
-          text: newMessageText,
-          isOur: true,
-          recipient: selectUserId,
-          id: Date.now(),
-        },
-      ]);
-    }
+    setMessages((prev) => [
+      ...prev,
+      {
+        text: newMessageText,
+        isOur: true,
+        recipient: selectUserId,
+        id: Date.now(),
+      },
+    ]);
   }
 
   useEffect(() => {
@@ -125,7 +123,7 @@ export default function Chat() {
           ) : (
             <div className="relative h-full ">
               <div className="flex flex-col gap-2 h-full overflow-y-scroll absolute top-0 right-0 left-0 bottom-2">
-                {messagesWithoutDupes.map(({ text, isOur }, index) => (
+                {messagesWithoutDupes?.map(({ text, isOur }, index) => (
                   <div
                     key={index}
                     className={`flex flex-col gap-1 ${
