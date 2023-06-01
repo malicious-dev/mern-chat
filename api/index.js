@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs')
 const ws = require('ws');
 const User = require('./models/user');
+const Message = require('./models/message');
 
 const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
@@ -122,6 +123,49 @@ wss.on('connection', (connection, req, res) => {
       })
     }
   }
+
+  connection.on('message', async (message) => {
+    const data = JSON.parse(message);
+    const { recipient, text } = data;
+
+    if (recipient && text) {
+      const messageDoc = await Message.create({
+        sender: connection.userId,
+        recipient,
+        text
+      });
+
+      [...wss.clients]
+        .filter(c => c.userId === recipient)
+        .forEach(client => {
+          client.send(JSON.stringify(
+            {
+              type: 'message',
+              sender: connection.userId,
+              text,
+              id: messageDoc.id,
+            }
+          ))
+        }
+        );
+    }
+
+
+
+  }),
+
+    connection.on('close', () => {
+      [...wss.clients].forEach(client => {
+        client.send(JSON.stringify(
+          {
+            online: [...wss.clients].map(c => ({ userId: c.userId, username: c.username }))
+
+          }
+        ))
+      }
+      );
+    });
+
   [...wss.clients].forEach(client => {
     client.send(JSON.stringify(
       {
